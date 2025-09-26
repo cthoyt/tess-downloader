@@ -9,6 +9,7 @@ import requests
 from tqdm import tqdm
 
 __all__ = [
+    "INSTANCES",
     "TeSSClient",
 ]
 
@@ -16,15 +17,28 @@ MODULE = pystow.module("tess")
 
 type Records = list[dict[str, Any]]
 
+#: Instances of TESS
+INSTANCES = {
+    "tess": "https://tess.elixir-europe.org",
+    "taxila": "https://taxila.nl",
+    "scilifelab": "https://training.scilifelab.se",
+    "dresa": "https://dresa.org.au",
+    "panosc": "https://www.panosc.eu",
+}
+
 
 class TeSSClient:
     """A client to a TeSS instance."""
 
-    def __init__(
-        self, key: str = "tess", base_url: str = "https://tess.elixir-europe.org/"
-    ) -> None:
+    def __init__(self, key: str = "tess", base_url: str | None = None) -> None:
         """Initialize the TeSS client."""
         self.key = key
+        if base_url is None:
+            if key not in INSTANCES:
+                raise ValueError(
+                    f"base_url needs to be given if it can't be looked up from {INSTANCES}"
+                )
+            base_url = INSTANCES[key]
         self.module = MODULE.module(self.key)
         self.raw_module = self.module.module("raw")
         self.base_url = base_url.rstrip("/")
