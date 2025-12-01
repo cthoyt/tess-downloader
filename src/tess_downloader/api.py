@@ -24,7 +24,10 @@ INSTANCES = {
     "taxila": "https://taxila.nl",
     "scilifelab": "https://training.scilifelab.se",
     "dresa": "https://dresa.org.au",
-    "panosc": "https://www.panosc.eu",    
+    "panosc": "https://www.panosc.eu",
+    "explora": "https://explora.alliancecan.ca",
+    "heptraining": "https://training.cern.ch",
+    "everse": "https://everse-training.app.cern.ch",
 }
 
 
