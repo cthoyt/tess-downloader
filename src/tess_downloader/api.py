@@ -17,13 +17,14 @@ MODULE = pystow.module("tess")
 
 type Records = list[dict[str, Any]]
 
-#: Instances of TESS
+#: Instances of TeSS. ELIXIR tries to maintain a loist
+#: of known instances at https://elixirtess.github.io/docs/overview/global/
 INSTANCES = {
     "tess": "https://tess.elixir-europe.org",
     "taxila": "https://taxila.nl",
     "scilifelab": "https://training.scilifelab.se",
     "dresa": "https://dresa.org.au",
-    "panosc": "https://www.panosc.eu",
+    "panosc": "https://www.panosc.eu",    
 }
 
 
