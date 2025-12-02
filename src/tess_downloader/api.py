@@ -224,9 +224,8 @@ class TeSSClient:
         >>> material = client.get_material(4986)
         >>> material.title
         'Unsupervised Analysis of Bone Marrow Cells with Flexynesis'
-        >>> material = client.get_material(
-        ...     "unsupervised-analysis-of-bone-marrow-cells-with-flexynesis"
-        >>> )
+        >>> slug = "unsupervised-analysis-of-bone-marrow-cells-with-flexynesis"
+        >>> material = client.get_material(slug)
         >>> material.title
         'Unsupervised Analysis of Bone Marrow Cells with Flexynesis'
         """
@@ -291,7 +290,7 @@ class TeSSClient:
             fields from the main model (e.g., slug is not required, since TeSS assigns
             those).
         :param email: The email for the user. If not given, looks up using
-            :func:`pystow.get_config where the module is this client's ``key`` and the
+            :func:`pystow.get_config` where the module is this client's ``key`` and the
             key is ``email``
         :param api_key: The API token for the user. If not given, looks up using
             :func:`pystow.get_config` where the module is this client's ``key`` and the
