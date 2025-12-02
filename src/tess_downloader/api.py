@@ -34,7 +34,7 @@ INSTANCES = {
 class Topic(BaseModel):
     """A topic."""
 
-    label: str = Field(serialization_alias="preferred-label")
+    preferred_label: str
     uri: str
 
 
@@ -65,7 +65,7 @@ class _BaseLearningMaterial(BaseModel):
     contact: str | None = None
     status: Literal["Archived", "Published", "Active", "Draft", "Development"] | None = None
     version: str | None = None
-    external_resources: list[ExternalResource] | None = Field(
+    external_resources: ExternalResource | list[ExternalResource] | None = Field(
         None, serialization_alias="external-resources"
     )
     difficult_level: Literal["notspecified", "advanced", "beginner", "intermediate"] = Field(
@@ -207,7 +207,7 @@ class TeSSClient:
         """Get events, e.g., https://tess.elixir-europe.org/events."""
         return self._get_paginated("events")
 
-    def get_material(self, slug_or_id: str | int) -> LearningMaterialWrapper:
+    def get_material(self, slug_or_id: str | int) -> LearningMaterial:
         """Get a single material, e.g., https://tess.elixir-europe.org/materials.
 
         :param slug_or_id: Either a slug (in kebab case) or numeric ID for the training
@@ -218,18 +218,19 @@ class TeSSClient:
         >>> from tess_downloader import TeSSClient
         >>> client = TeSSClient()
         >>> material = client.get_material(4986)
-        >>> material.attributes.title
+        >>> material.title
         'Unsupervised Analysis of Bone Marrow Cells with Flexynesis'
         >>> material = client.get_material(
         ...     "unsupervised-analysis-of-bone-marrow-cells-with-flexynesis"
         >>> )
-        >>> material.attributes.title
+        >>> material.title
         'Unsupervised Analysis of Bone Marrow Cells with Flexynesis'
         """
         url = f"{self.base_url}/materials/{slug_or_id}.json"
         res = requests.get(url, timeout=15)
         res.raise_for_status()
-        return LearningMaterialWrapper.model_validate(res.json())
+        res_json = res.json()
+        return LearningMaterial.model_validate(res_json)
 
     def get_materials(self) -> list[LearningMaterialWrapper]:
         """Get materials, e.g., https://tess.elixir-europe.org/materials."""
@@ -282,14 +283,17 @@ class TeSSClient:
     ) -> requests.Response:
         """Post a learning material.
 
-        :param learning_material: The learning material, which has a few fewer required fields from
-            the main model (e.g., slug is not required, since TeSS assigns those).
-        :param email: The email for the user. If not given, looks up using :func:`pystow.get_config
-            where the module is this client's ``key`` and the key is ``email``
+        :param learning_material: The learning material, which has a few fewer required
+            fields from the main model (e.g., slug is not required, since TeSS assigns
+            those).
+        :param email: The email for the user. If not given, looks up using
+            :func:`pystow.get_config where the module is this client's ``key`` and the
+            key is ``email``
         :param api_key: The API token for the user. If not given, looks up using
-            :func:`pystow.get_config` where the module is this client's ``key`` and the key is
-            ``api_key``
-        :return: The response from the server
+            :func:`pystow.get_config` where the module is this client's ``key`` and the
+            key is ``api_key``
+
+        :returns: The response from the server
         """
         url = f"{self.base_url}/materials.json"
         email = pystow.get_config(self.key, "email", raise_on_missing=True, passthrough=email)
