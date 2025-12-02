@@ -1,5 +1,6 @@
-Command Line Interface
-======================
+########################
+ Command Line Interface
+########################
 
 tess_downloader automatically installs the command ``tess_downloader``. See
 ``tess_downloader --help`` for usage details.

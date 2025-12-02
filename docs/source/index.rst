@@ -1,5 +1,6 @@
-TeSS Downloader |release| Documentation
-=======================================
+#########################################
+ TeSS Downloader |release| Documentation
+#########################################
 
 .. toctree::
     :maxdepth: 2
@@ -10,8 +11,9 @@ TeSS Downloader |release| Documentation
     usage
     cli
 
-Indices and Tables
-------------------
+********************
+ Indices and Tables
+********************
 
 - :ref:`genindex`
 - :ref:`modindex`

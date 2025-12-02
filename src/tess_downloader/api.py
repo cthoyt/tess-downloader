@@ -13,8 +13,14 @@ from tqdm import tqdm
 
 __all__ = [
     "INSTANCES",
+    "ExternalResource",
     "LearningMaterial",
+    "LearningMaterialWrapper",
+    "Links",
+    "PostLearningMaterial",
+    "Relationships",
     "TeSSClient",
+    "Topic",
 ]
 
 MODULE = pystow.module("tess")
