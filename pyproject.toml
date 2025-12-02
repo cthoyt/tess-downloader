@@ -53,6 +53,7 @@ dependencies = [
     "more_click",
     "typing-extensions",
     "requests",
+    "pydantic",
     "pystow",
 ]
 

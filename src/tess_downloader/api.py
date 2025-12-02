@@ -1,11 +1,13 @@
 """A client for TeSS."""
 
+import datetime
 import json
 from typing import Any, cast
 
 import click
 import pystow
 import requests
+from pydantic import BaseModel
 from tqdm import tqdm
 
 __all__ = [
@@ -25,6 +27,71 @@ INSTANCES = {
     "dresa": "https://dresa.org.au",
     "panosc": "https://www.panosc.eu",
 }
+
+
+class Attributes(BaseModel):
+    external_id: str | None
+    title: str
+    subtitle: str
+    url: str
+    description: str
+    keywords: list[str]
+    event_types: list[str]
+    scientific_topics: list[str]
+    # operations
+    # fields
+    # external-resources
+    start: datetime.datetime
+    end: datetime.datetime
+    # duration
+    # timezone
+    # organizer
+    # sponsors
+    # contact
+    # host-institutions
+    # online
+    # presence
+    # venue
+    # city
+    # county
+    # country
+    # postcode
+    # latitude
+    # longitude
+    # capcaity
+    # cost-basis
+    # cost-value
+    # cost-currency
+    target_audience: list[str]
+    # eligibility
+    # recognition
+    learning_objectives: list[str]
+    prerequisities: list[str]
+    # tech-requirements
+    slug: str
+    # last-scraped
+    # scraper-report
+    # created-at
+    # updated-at
+
+
+class Relationships(BaseModel):
+    pass
+
+
+class Links(BaseModel):
+    self: str
+    redirect: str
+
+
+class LearningMaterial(BaseModel):
+    """Represents a Learning Material in TeSS."""
+
+    id: str
+    type: str
+    attributes: Attributes
+    relationships: Relationships | None = None
+    links: Links | None = None
 
 
 class TeSSClient:
@@ -144,3 +211,11 @@ class TeSSClient:
         self.get_learning_paths()
         self.get_content_providers()
         self.get_nodes()
+
+    def post(self, payload: LearningMaterial) -> dict[str, Any]:
+        """Post a learning material."""
+        url = f"{self.base_url}/materials/"
+        res = requests.post(
+            url, timeout=15, json=payload.model_dump(exclude_none=True, exclude_unset=True)
+        )
+        return res.json()
