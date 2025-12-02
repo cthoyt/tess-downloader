@@ -49,10 +49,8 @@ class ExternalResource(BaseModel):
     type: str | None = None
 
 
-class LearningMaterial(BaseModel):
-    """The attributes for learning materials in TeSS."""
-
-    slug: str
+class _BaseLearningMaterial(BaseModel):
+    slug: str | None = None
     title: str
     url: str
     description: str
@@ -98,6 +96,16 @@ class LearningMaterial(BaseModel):
     # "scraper-record": true,
     # "created-at": "2025-06-18T05:33:14.781Z",
     # "updated-at": "2025-06-18T05:33:14.781Z"
+
+
+class LearningMaterial(_BaseLearningMaterial):
+    """The attributes for learning materials in TeSS."""
+
+    slug: str
+
+
+class PostLearningMaterial(_BaseLearningMaterial):
+    """A learning material for use with the post endpoint."""
 
 
 class Relationships(BaseModel):
@@ -199,6 +207,13 @@ class TeSSClient:
         """Get events, e.g., https://tess.elixir-europe.org/events."""
         return self._get_paginated("events")
 
+    def get_material(self, slug_or_id: str | int) -> LearningMaterialWrapper:
+        """Get a single material, e.g., https://tess.elixir-europe.org/materials."""
+        url = f"{self.base_url}/materials/{slug_or_id}.json"
+        res = requests.get(url, timeout=15)
+        res.raise_for_status()
+        return LearningMaterialWrapper.model_validate(res.json())
+
     def get_materials(self) -> list[LearningMaterialWrapper]:
         """Get materials, e.g., https://tess.elixir-europe.org/materials."""
         return [
@@ -242,12 +257,13 @@ class TeSSClient:
         self.get_nodes()
 
     def post(
-        self, payload: LearningMaterialWrapper, email: str | None = None, api_key: str | None = None
+        self, payload: PostLearningMaterial, email: str | None = None, api_key: str | None = None
     ) -> requests.Response:
         """Post a learning material."""
-        url = f"{self.base_url}/materials"
+        url = f"{self.base_url}/materials.json"
         email = pystow.get_config("tess", "email", raise_on_missing=True, passthrough=email)
         api_key = pystow.get_config("tess", "api_key", raise_on_missing=True, passthrough=api_key)
+        # see https://github.com/ElixirTeSS/TeSS/blob/master/docs/api.md
         headers = {
             "Accept": "application/json",
             "X-User-Token": api_key,
@@ -256,7 +272,7 @@ class TeSSClient:
         res = requests.post(
             url,
             timeout=15,
-            json=payload.model_dump(exclude_none=True, exclude_unset=True),
+            json={"material": payload.model_dump(exclude_none=True, exclude_unset=True)},
             headers=headers,
         )
         return res
@@ -277,22 +293,19 @@ def _clean(x: dict[str, Any]) -> dict[str, Any]:
 
 
 def _main() -> None:
-    payload = LearningMaterialWrapper(
-        id="12345",
-        attributes=LearningMaterial(
-            slug="test-dalia-export",
-            title="Test title",
-            url="https://example.org/test",
-            description="Test description",
-            authors=["Charles Tapley Hoyt"],
-        ),
+    payload = PostLearningMaterial(
+        title="Test title",
+        url="https://example.org/test",
+        description="Test description",
+        authors=["Charles Tapley Hoyt"],
     )
 
     base_url = "https://test.tesshub.hzdr.de"
     key = pystow.get_config("panosc", "test_key", raise_on_missing=True)
+    email = pystow.get_config("panosc", "test_email")
     api_token = pystow.get_config("panosc", "test_api_token")
     client = TeSSClient(key=key, base_url=base_url)
-    res = client.post(payload, api_key=api_token)
+    res = client.post(payload, api_key=api_token, email=email)
     res.raise_for_status()
     click.echo(json.dumps(res.json(), indent=2))
 
