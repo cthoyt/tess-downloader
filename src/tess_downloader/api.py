@@ -1,9 +1,11 @@
 """A client for TeSS."""
 
+import datetime
 import json
 from typing import Any, Literal, cast
 
 import click
+import pydantic
 import pystow
 import requests
 from pydantic import BaseModel, Field
@@ -36,6 +38,17 @@ class Topic(BaseModel):
     uri: str
 
 
+class ExternalResource(BaseModel):
+    """Links to external resources."""
+
+    title: str
+    url: str
+    created_at: datetime.datetime = Field(..., serialization_alias="created-at")
+    updated_at: datetime.datetime = Field(..., serialization_alias="updated-at")
+    api_url: str | None = Field(None, serialization_alias="api-url")
+    type: str | None = None
+
+
 class LearningMaterial(BaseModel):
     """The attributes for learning materials in TeSS."""
 
@@ -52,16 +65,26 @@ class LearningMaterial(BaseModel):
     contributors: list[str] | None = None
     authors: list[str] | None = None
     contact: str | None = None
-    status: Literal["Archived", "Published", "Active"] | None = None
+    status: Literal["Archived", "Published", "Active", "Draft", "Development"] | None = None
     version: str | None = None
-    external_resources: list[str] | None = Field(None, serialization_alias="external-resources")
+    external_resources: list[ExternalResource] | None = Field(
+        None, serialization_alias="external-resources"
+    )
     difficult_level: Literal["notspecified", "advanced", "beginner", "intermediate"] = Field(
         "notspecified", serialization_alias="scientific-topics"
     )
     target_audience: list[str] | None = Field(None, serialization_alias="target-audience")
-    prerequisites: list[str] | None = None
+    prerequisites: str | None = None
     fields: list[str] | None = None
     learning_objectives: str | None = Field(None, serialization_alias="learning-objectives")
+
+    @pydantic.field_validator("status", mode="before")
+    @classmethod
+    def status_title_case(cls, value: str | None) -> str | None:
+        """Fix statuses that are not in title case."""
+        if isinstance(value, str):
+            return value.title()
+        return value
 
     # "operations": [],
     # "syllabus": null,
@@ -85,7 +108,7 @@ class Links(BaseModel):
     """Links generated for a learning material and sent by the API."""
 
     self: str
-    redirect: str
+    redirect: str | None = None
 
 
 class LearningMaterialWrapper(BaseModel):
@@ -176,9 +199,12 @@ class TeSSClient:
         """Get events, e.g., https://tess.elixir-europe.org/events."""
         return self._get_paginated("events")
 
-    def get_materials(self) -> Records:
+    def get_materials(self) -> list[LearningMaterialWrapper]:
         """Get materials, e.g., https://tess.elixir-europe.org/materials."""
-        return self._get_paginated("materials")
+        return [
+            LearningMaterialWrapper.model_validate(_clean(x))
+            for x in self._get_paginated("materials")
+        ]
 
     def get_elearning_materials(self) -> Records:
         """Get eLearning materials, e.g., https://tess.elixir-europe.org/elearning_materials."""
@@ -215,22 +241,39 @@ class TeSSClient:
         self.get_content_providers()
         self.get_nodes()
 
-    def post(self, payload: LearningMaterialWrapper, api_key: str | None) -> requests.Response:
+    def post(
+        self, payload: LearningMaterialWrapper, email: str | None = None, api_key: str | None = None
+    ) -> requests.Response:
         """Post a learning material."""
         url = f"{self.base_url}/materials"
+        email = pystow.get_config("tess", "email", raise_on_missing=True, passthrough=email)
         api_key = pystow.get_config("tess", "api_key", raise_on_missing=True, passthrough=api_key)
         headers = {
             "Accept": "application/json",
-            "Authorization": api_key,
+            "X-User-Token": api_key,
+            "X-User-Email": email,
         }
         res = requests.post(
             url,
             timeout=15,
             json=payload.model_dump(exclude_none=True, exclude_unset=True),
             headers=headers,
-            # TODO where to put the API key?
         )
         return res
+
+
+def _clean(x: dict[str, Any]) -> dict[str, Any]:
+    rv = {}
+    for k, v in x.items():
+        if not v:
+            continue
+        if isinstance(v, dict):
+            rv[k] = _clean(v)
+        elif isinstance(v, str) and (v_stripped := v.strip()):
+            rv[k] = v_stripped  # type:ignore
+        else:
+            rv[k] = v
+    return rv
 
 
 def _main() -> None:
