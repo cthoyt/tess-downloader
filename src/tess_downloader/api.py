@@ -274,12 +274,26 @@ class TeSSClient:
         self.get_nodes()
 
     def post(
-        self, payload: PostLearningMaterial, email: str | None = None, api_key: str | None = None
+        self,
+        learning_material: PostLearningMaterial,
+        *,
+        email: str | None = None,
+        api_key: str | None = None,
     ) -> requests.Response:
-        """Post a learning material."""
+        """Post a learning material.
+
+        :param learning_material: The learning material, which has a few fewer required fields from
+            the main model (e.g., slug is not required, since TeSS assigns those).
+        :param email: The email for the user. If not given, looks up using :func:`pystow.get_config
+            where the module is this client's ``key`` and the key is ``email``
+        :param api_key: The API token for the user. If not given, looks up using
+            :func:`pystow.get_config` where the module is this client's ``key`` and the key is
+            ``api_key``
+        :return: The response from the server
+        """
         url = f"{self.base_url}/materials.json"
-        email = pystow.get_config("tess", "email", raise_on_missing=True, passthrough=email)
-        api_key = pystow.get_config("tess", "api_key", raise_on_missing=True, passthrough=api_key)
+        email = pystow.get_config(self.key, "email", raise_on_missing=True, passthrough=email)
+        api_key = pystow.get_config(self.key, "api_key", raise_on_missing=True, passthrough=api_key)
         # see https://github.com/ElixirTeSS/TeSS/blob/master/docs/api.md
         headers = {
             "Accept": "application/json",
@@ -289,7 +303,7 @@ class TeSSClient:
         res = requests.post(
             url,
             timeout=15,
-            json={"material": payload.model_dump(exclude_none=True, exclude_unset=True)},
+            json={"material": learning_material.model_dump(exclude_none=True, exclude_unset=True)},
             headers=headers,
         )
         return res
