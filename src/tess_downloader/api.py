@@ -1,13 +1,12 @@
 """A client for TeSS."""
 
-import datetime
 import json
-from typing import Any, cast
+from typing import Any, Literal, cast
 
 import click
 import pystow
 import requests
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from tqdm import tqdm
 
 __all__ = [
@@ -30,56 +29,53 @@ INSTANCES = {
 
 
 class Attributes(BaseModel):
-    external_id: str | None
+    """The attributes for learning materials in TeSS."""
+
+    slug: str
     title: str
-    subtitle: str
     url: str
     description: str
-    keywords: list[str]
-    event_types: list[str]
-    scientific_topics: list[str]
-    # operations
-    # fields
-    # external-resources
-    start: datetime.datetime
-    end: datetime.datetime
-    # duration
-    # timezone
-    # organizer
-    # sponsors
-    # contact
-    # host-institutions
-    # online
-    # presence
-    # venue
-    # city
-    # county
-    # country
-    # postcode
-    # latitude
-    # longitude
-    # capcaity
-    # cost-basis
-    # cost-value
-    # cost-currency
-    target_audience: list[str]
-    # eligibility
-    # recognition
-    learning_objectives: list[str]
-    prerequisities: list[str]
-    # tech-requirements
-    slug: str
-    # last-scraped
-    # scraper-report
-    # created-at
-    # updated-at
+    keywords: list[str] | None = None
+    resource_type: list[str] | None = Field(None, serialization_alias="resource-type")
+    other_types: None = Field(None, serialization_alias="other-types")
+    scientific_topics: list[str] | None = Field(None, serialization_alias="scientific-topics")
+    doi: str | None | None = None
+    licence: str | None = None
+    contributors: list[str] | None = None
+    authors: list[str] | None = None
+    contact: str | None = None
+    status: str | None = None
+    version: str | None = None
+    external_resources: list[str] | None = Field(None, serialization_alias="external-resources")
+    difficult_level: Literal["notspecified", "advanced", "beginner", "intermediate"] = Field(
+        "notspecified", serialization_alias="scientific-topics"
+    )
+    target_audience: list[str] | None = Field(None, serialization_alias="target-audience")
+
+    # "operations": [],
+    # "fields": [],
+    # "prerequisites": null,
+    # "syllabus": null,
+    # "learning-objectives": null,
+    # "subsets": [],
+    # "date-created": "2022-10-11",
+    # "date-modified": "2025-06-11",
+    # "date-published": "2025-05-05",
+    # "remote-updated-date": null,
+    # "remote-created-date": null,
+    # "last-scraped": "2025-06-18",
+    # "scraper-record": true,
+    # "created-at": "2025-06-18T05:33:14.781Z",
+    # "updated-at": "2025-06-18T05:33:14.781Z"
 
 
 class Relationships(BaseModel):
-    pass
+    """Relationships from the API."""
 
 
 class Links(BaseModel):
+    """Links generated for a learning material and sent by the API."""
+
     self: str
     redirect: str
 
@@ -88,7 +84,6 @@ class LearningMaterial(BaseModel):
     """Represents a Learning Material in TeSS."""
 
     id: str
-    type: str
     attributes: Attributes
     relationships: Relationships | None = None
     links: Links | None = None
@@ -212,10 +207,35 @@ class TeSSClient:
         self.get_content_providers()
         self.get_nodes()
 
-    def post(self, payload: LearningMaterial) -> dict[str, Any]:
+    def post(self, payload: LearningMaterial, api_key: str | None) -> requests.Response:
         """Post a learning material."""
         url = f"{self.base_url}/materials/"
         res = requests.post(
-            url, timeout=15, json=payload.model_dump(exclude_none=True, exclude_unset=True)
+            url,
+            timeout=15,
+            json=payload.model_dump(exclude_none=True, exclude_unset=True),
         )
-        return res.json()
+        return res
+
+
+def _main() -> None:
+    payload = LearningMaterial(
+        id="12345",
+        attributes=Attributes(
+            slug="test-dalia-export",
+            title="Test title",
+            url="https://example.org/test",
+            description="Test description",
+            authors=["Charles Tapley Hoyt"],
+        ),
+    )
+
+    api_key = pystow.get_config("tess", "api_key", raise_on_missing=True)
+    client = TeSSClient()
+    res = client.post(payload, api_key=api_key)
+    res.raise_for_status()
+    click.echo(json.dumps(res.json(), indent=2))
+
+
+if __name__ == "__main__":
+    _main()
