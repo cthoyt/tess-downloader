@@ -210,10 +210,12 @@ class TeSSClient:
     def post(self, payload: LearningMaterial, api_key: str | None) -> requests.Response:
         """Post a learning material."""
         url = f"{self.base_url}/materials/"
+        api_key = pystow.get_config("tess", "api_key", raise_on_missing=True, passthrough=api_key)
         res = requests.post(
             url,
             timeout=15,
             json=payload.model_dump(exclude_none=True, exclude_unset=True),
+            # TODO where to put the API key?
         )
         return res
 
@@ -230,7 +232,6 @@ def _main() -> None:
         ),
     )
 
-    api_key = pystow.get_config("tess", "api_key", raise_on_missing=True)
     client = TeSSClient()
     res = client.post(payload, api_key=api_key)
     res.raise_for_status()
