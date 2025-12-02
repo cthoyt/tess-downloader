@@ -44,19 +44,19 @@ class Attributes(BaseModel):
     contributors: list[str] | None = None
     authors: list[str] | None = None
     contact: str | None = None
-    status: str | None = None
+    status: Literal["Archived", "Published", "Active"] | None = None
     version: str | None = None
     external_resources: list[str] | None = Field(None, serialization_alias="external-resources")
     difficult_level: Literal["notspecified", "advanced", "beginner", "intermediate"] = Field(
         "notspecified", serialization_alias="scientific-topics"
     )
     target_audience: list[str] | None = Field(None, serialization_alias="target-audience")
+    prerequisites: list[str] | None = None
+    fields: list[str] | None = None
+    learning_objectives: str | None = Field(None, serialization_alias="learning-objectives")
 
     # "operations": [],
-    # "fields": [],
-    # "prerequisites": null,
     # "syllabus": null,
-    # "learning-objectives": null,
     # "subsets": [],
     # "date-created": "2022-10-11",
     # "date-modified": "2025-06-11",
