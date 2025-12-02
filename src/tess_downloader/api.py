@@ -11,6 +11,7 @@ from tqdm import tqdm
 
 __all__ = [
     "INSTANCES",
+    "LearningMaterial",
     "TeSSClient",
 ]
 
@@ -28,7 +29,14 @@ INSTANCES = {
 }
 
 
-class Attributes(BaseModel):
+class Topic(BaseModel):
+    """A topic."""
+
+    label: str = Field(serialization_alias="preferred-label")
+    uri: str
+
+
+class LearningMaterial(BaseModel):
     """The attributes for learning materials in TeSS."""
 
     slug: str
@@ -38,7 +46,7 @@ class Attributes(BaseModel):
     keywords: list[str] | None = None
     resource_type: list[str] | None = Field(None, serialization_alias="resource-type")
     other_types: None = Field(None, serialization_alias="other-types")
-    scientific_topics: list[str] | None = Field(None, serialization_alias="scientific-topics")
+    scientific_topics: list[Topic] | None = Field(None, serialization_alias="scientific-topics")
     doi: str | None | None = None
     licence: str | None = None
     contributors: list[str] | None = None
@@ -80,11 +88,11 @@ class Links(BaseModel):
     redirect: str
 
 
-class LearningMaterial(BaseModel):
+class LearningMaterialWrapper(BaseModel):
     """Represents a Learning Material in TeSS."""
 
     id: str
-    attributes: Attributes
+    attributes: LearningMaterial
     relationships: Relationships | None = None
     links: Links | None = None
 
@@ -207,23 +215,28 @@ class TeSSClient:
         self.get_content_providers()
         self.get_nodes()
 
-    def post(self, payload: LearningMaterial, api_key: str | None) -> requests.Response:
+    def post(self, payload: LearningMaterialWrapper, api_key: str | None) -> requests.Response:
         """Post a learning material."""
-        url = f"{self.base_url}/materials/"
+        url = f"{self.base_url}/materials"
         api_key = pystow.get_config("tess", "api_key", raise_on_missing=True, passthrough=api_key)
+        headers = {
+            "Accept": "application/json",
+            "Authorization": api_key,
+        }
         res = requests.post(
             url,
             timeout=15,
             json=payload.model_dump(exclude_none=True, exclude_unset=True),
+            headers=headers,
             # TODO where to put the API key?
         )
         return res
 
 
 def _main() -> None:
-    payload = LearningMaterial(
+    payload = LearningMaterialWrapper(
         id="12345",
-        attributes=Attributes(
+        attributes=LearningMaterial(
             slug="test-dalia-export",
             title="Test title",
             url="https://example.org/test",
@@ -232,8 +245,11 @@ def _main() -> None:
         ),
     )
 
-    client = TeSSClient()
-    res = client.post(payload, api_key=api_key)
+    base_url = "https://test.tesshub.hzdr.de"
+    key = pystow.get_config("panosc", "test_key", raise_on_missing=True)
+    api_token = pystow.get_config("panosc", "test_api_token")
+    client = TeSSClient(key=key, base_url=base_url)
+    res = client.post(payload, api_key=api_token)
     res.raise_for_status()
     click.echo(json.dumps(res.json(), indent=2))
 
