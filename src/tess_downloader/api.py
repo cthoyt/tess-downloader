@@ -1,15 +1,19 @@
 """A client for TeSS."""
 
+import datetime
 import json
-from typing import Any, cast
+from typing import Any, Literal, cast
 
 import click
+import pydantic
 import pystow
 import requests
+from pydantic import BaseModel, Field
 from tqdm import tqdm
 
 __all__ = [
     "INSTANCES",
+    "LearningMaterial",
     "TeSSClient",
 ]
 
@@ -29,6 +33,103 @@ INSTANCES = {
     "heptraining": "https://training.cern.ch",
     "everse": "https://everse-training.app.cern.ch",
 }
+
+
+class Topic(BaseModel):
+    """A topic."""
+
+    preferred_label: str
+    uri: str
+
+
+class ExternalResource(BaseModel):
+    """Links to external resources."""
+
+    title: str
+    url: str
+    created_at: datetime.datetime = Field(..., serialization_alias="created-at")
+    updated_at: datetime.datetime = Field(..., serialization_alias="updated-at")
+    api_url: str | None = Field(None, serialization_alias="api-url")
+    type: str | None = None
+
+
+class _BaseLearningMaterial(BaseModel):
+    slug: str | None = None
+    title: str
+    url: str
+    description: str
+    keywords: list[str] | None = None
+    resource_type: list[str] | None = Field(None, serialization_alias="resource-type")
+    other_types: None = Field(None, serialization_alias="other-types")
+    scientific_topics: list[Topic] | None = Field(None, serialization_alias="scientific-topics")
+    doi: str | None | None = None
+    licence: str | None = None
+    contributors: list[str] | None = None
+    authors: list[str] | None = None
+    contact: str | None = None
+    status: Literal["Archived", "Published", "Active", "Draft", "Development"] | None = None
+    version: str | None = None
+    external_resources: ExternalResource | list[ExternalResource] | None = Field(
+        None, serialization_alias="external-resources"
+    )
+    difficult_level: Literal["notspecified", "advanced", "beginner", "intermediate"] = Field(
+        "notspecified", serialization_alias="scientific-topics"
+    )
+    target_audience: list[str] | None = Field(None, serialization_alias="target-audience")
+    prerequisites: str | None = None
+    fields: list[str] | None = None
+    learning_objectives: str | None = Field(None, serialization_alias="learning-objectives")
+
+    @pydantic.field_validator("status", mode="before")
+    @classmethod
+    def status_title_case(cls, value: str | None) -> str | None:
+        """Fix statuses that are not in title case."""
+        if isinstance(value, str):
+            return value.title()
+        return value
+
+    # "operations": [],
+    # "syllabus": null,
+    # "subsets": [],
+    # "date-created": "2022-10-11",
+    # "date-modified": "2025-06-11",
+    # "date-published": "2025-05-05",
+    # "remote-updated-date": null,
+    # "remote-created-date": null,
+    # "last-scraped": "2025-06-18",
+    # "scraper-record": true,
+    # "created-at": "2025-06-18T05:33:14.781Z",
+    # "updated-at": "2025-06-18T05:33:14.781Z"
+
+
+class LearningMaterial(_BaseLearningMaterial):
+    """The attributes for learning materials in TeSS."""
+
+    slug: str
+
+
+class PostLearningMaterial(_BaseLearningMaterial):
+    """A learning material for use with the post endpoint."""
+
+
+class Relationships(BaseModel):
+    """Relationships from the API."""
+
+
+class Links(BaseModel):
+    """Links generated for a learning material and sent by the API."""
+
+    self: str
+    redirect: str | None = None
+
+
+class LearningMaterialWrapper(BaseModel):
+    """Represents a Learning Material in TeSS."""
+
+    id: str
+    attributes: LearningMaterial
+    relationships: Relationships | None = None
+    links: Links | None = None
 
 
 class TeSSClient:
@@ -110,9 +211,37 @@ class TeSSClient:
         """Get events, e.g., https://tess.elixir-europe.org/events."""
         return self._get_paginated("events")
 
-    def get_materials(self) -> Records:
+    def get_material(self, slug_or_id: str | int) -> LearningMaterial:
+        """Get a single material, e.g., https://tess.elixir-europe.org/materials.
+
+        :param slug_or_id: Either a slug (in kebab case) or numeric ID for the training
+            material within the TeSS instance
+
+        :returns: A learning material
+
+        >>> from tess_downloader import TeSSClient
+        >>> client = TeSSClient()
+        >>> material = client.get_material(4986)
+        >>> material.title
+        'Unsupervised Analysis of Bone Marrow Cells with Flexynesis'
+        >>> material = client.get_material(
+        ...     "unsupervised-analysis-of-bone-marrow-cells-with-flexynesis"
+        >>> )
+        >>> material.title
+        'Unsupervised Analysis of Bone Marrow Cells with Flexynesis'
+        """
+        url = f"{self.base_url}/materials/{slug_or_id}.json"
+        res = requests.get(url, timeout=15)
+        res.raise_for_status()
+        res_json = res.json()
+        return LearningMaterial.model_validate(res_json)
+
+    def get_materials(self) -> list[LearningMaterialWrapper]:
         """Get materials, e.g., https://tess.elixir-europe.org/materials."""
-        return self._get_paginated("materials")
+        return [
+            LearningMaterialWrapper.model_validate(_clean(x))
+            for x in self._get_paginated("materials")
+        ]
 
     def get_elearning_materials(self) -> Records:
         """Get eLearning materials, e.g., https://tess.elixir-europe.org/elearning_materials."""
@@ -148,3 +277,55 @@ class TeSSClient:
         self.get_learning_paths()
         self.get_content_providers()
         self.get_nodes()
+
+    def post(
+        self,
+        learning_material: PostLearningMaterial,
+        *,
+        email: str | None = None,
+        api_key: str | None = None,
+    ) -> requests.Response:
+        """Post a learning material.
+
+        :param learning_material: The learning material, which has a few fewer required
+            fields from the main model (e.g., slug is not required, since TeSS assigns
+            those).
+        :param email: The email for the user. If not given, looks up using
+            :func:`pystow.get_config where the module is this client's ``key`` and the
+            key is ``email``
+        :param api_key: The API token for the user. If not given, looks up using
+            :func:`pystow.get_config` where the module is this client's ``key`` and the
+            key is ``api_key``
+
+        :returns: The response from the server
+        """
+        url = f"{self.base_url}/materials.json"
+        email = pystow.get_config(self.key, "email", raise_on_missing=True, passthrough=email)
+        api_key = pystow.get_config(self.key, "api_key", raise_on_missing=True, passthrough=api_key)
+        # see https://github.com/ElixirTeSS/TeSS/blob/master/docs/api.md
+        headers = {
+            "Accept": "application/json",
+            "X-User-Token": api_key,
+            "X-User-Email": email,
+        }
+        res = requests.post(
+            url,
+            timeout=15,
+            json={"material": learning_material.model_dump(exclude_none=True, exclude_unset=True)},
+            headers=headers,
+        )
+        return res
+
+
+def _clean(x: dict[str, Any]) -> dict[str, Any]:
+    rv = {}
+    for k, v in x.items():
+        if not v:
+            continue
+        if isinstance(v, dict):
+            rv[k] = _clean(v)
+        elif isinstance(v, str) and (v_stripped := v.strip()):
+            rv[k] = v_stripped  # type:ignore
+        else:
+            rv[k] = v
+    return rv
