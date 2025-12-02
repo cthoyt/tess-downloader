@@ -208,7 +208,24 @@ class TeSSClient:
         return self._get_paginated("events")
 
     def get_material(self, slug_or_id: str | int) -> LearningMaterialWrapper:
-        """Get a single material, e.g., https://tess.elixir-europe.org/materials."""
+        """Get a single material, e.g., https://tess.elixir-europe.org/materials.
+
+        :param slug_or_id: Either a slug (in kebab case) or numeric ID for the training
+            material within the TeSS instance
+
+        :returns: A learning material
+
+        >>> from tess_downloader import TeSSClient
+        >>> client = TeSSClient()
+        >>> material = client.get_material(4986)
+        >>> material.attributes.title
+        'Unsupervised Analysis of Bone Marrow Cells with Flexynesis'
+        >>> material = client.get_material(
+        ...     "unsupervised-analysis-of-bone-marrow-cells-with-flexynesis"
+        >>> )
+        >>> material.attributes.title
+        'Unsupervised Analysis of Bone Marrow Cells with Flexynesis'
+        """
         url = f"{self.base_url}/materials/{slug_or_id}.json"
         res = requests.get(url, timeout=15)
         res.raise_for_status()
@@ -290,25 +307,3 @@ def _clean(x: dict[str, Any]) -> dict[str, Any]:
         else:
             rv[k] = v
     return rv
-
-
-def _main() -> None:
-    payload = PostLearningMaterial(
-        title="Test title",
-        url="https://example.org/test",
-        description="Test description",
-        authors=["Charles Tapley Hoyt"],
-    )
-
-    base_url = "https://test.tesshub.hzdr.de"
-    key = pystow.get_config("panosc", "test_key", raise_on_missing=True)
-    email = pystow.get_config("panosc", "test_email")
-    api_token = pystow.get_config("panosc", "test_api_token")
-    client = TeSSClient(key=key, base_url=base_url)
-    res = client.post(payload, api_key=api_token, email=email)
-    res.raise_for_status()
-    click.echo(json.dumps(res.json(), indent=2))
-
-
-if __name__ == "__main__":
-    _main()
