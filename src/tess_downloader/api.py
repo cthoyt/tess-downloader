@@ -13,12 +13,14 @@ from tqdm import tqdm
 
 __all__ = [
     "INSTANCES",
+    "DifficultyLevel",
     "ExternalResource",
     "LearningMaterial",
     "LearningMaterialWrapper",
     "Links",
     "PostLearningMaterial",
     "Relationships",
+    "Status",
     "TeSSClient",
     "Topic",
 ]
@@ -26,6 +28,9 @@ __all__ = [
 MODULE = pystow.module("tess")
 
 type Records = list[dict[str, Any]]
+type Status = Literal["Archived", "Published", "Active", "Draft", "Development"]
+type DifficultyLevel = Literal["notspecified", "advanced", "beginner", "intermediate"]
+
 
 #: Instances of TeSS. ELIXIR tries to maintain a loist
 #: of known instances at https://elixirtess.github.io/docs/overview/global/
@@ -69,17 +74,17 @@ class _BaseLearningMaterial(BaseModel):
     other_types: None = Field(None, serialization_alias="other-types")
     scientific_topics: list[Topic] | None = Field(None, serialization_alias="scientific-topics")
     doi: str | None | None = None
-    licence: str | None = None
+    license: str | None = Field(None, serialization_alias="licence")
     contributors: list[str] | None = None
     authors: list[str] | None = None
     contact: str | None = None
-    status: Literal["Archived", "Published", "Active", "Draft", "Development"] | None = None
+    status: Status | None = None
     version: str | None = None
     external_resources: ExternalResource | list[ExternalResource] | None = Field(
         None, serialization_alias="external-resources"
     )
-    difficult_level: Literal["notspecified", "advanced", "beginner", "intermediate"] = Field(
-        "notspecified", serialization_alias="scientific-topics"
+    difficulty_level: DifficultyLevel = Field(
+        "notspecified", serialization_alias="difficulty-level"
     )
     target_audience: list[str] | None = Field(None, serialization_alias="target-audience")
     prerequisites: str | None = None
