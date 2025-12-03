@@ -18,7 +18,6 @@ __all__ = [
     "LearningMaterial",
     "LearningMaterialWrapper",
     "Links",
-    "PostLearningMaterial",
     "Relationships",
     "Status",
     "TeSSClient",
@@ -63,7 +62,9 @@ class ExternalResource(BaseModel):
     type: str | None = None
 
 
-class _BaseLearningMaterial(BaseModel):
+class LearningMaterial(BaseModel):
+    """The attributes for learning materials in TeSS."""
+
     slug: str | None = None
     title: str
     url: str
@@ -111,16 +112,6 @@ class _BaseLearningMaterial(BaseModel):
     # "subsets": [],
     # "remote-updated-date": null,
     # "remote-created-date": null,
-
-
-class LearningMaterial(_BaseLearningMaterial):
-    """The attributes for learning materials in TeSS."""
-
-    slug: str
-
-
-class PostLearningMaterial(_BaseLearningMaterial):
-    """A learning material for use with the post endpoint."""
 
 
 class Relationships(BaseModel):
@@ -290,7 +281,7 @@ class TeSSClient:
 
     def post(
         self,
-        learning_material: PostLearningMaterial,
+        learning_material: LearningMaterial,
         *,
         email: str | None = None,
         api_key: str | None = None,
