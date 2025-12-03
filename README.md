@@ -42,6 +42,10 @@ from tess_downloader import TeSSClient
 # defaults to ELIXIR instance at https://tess.elixir-europe.org/
 client = TeSSClient()
 materials = client.get_materials()
+
+material = client.get_material(4986)
+>>> material.title
+'Unsupervised Analysis of Bone Marrow Cells with Flexynesis'
 ```
 
 ### Command Line Interface
