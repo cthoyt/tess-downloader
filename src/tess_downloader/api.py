@@ -31,7 +31,6 @@ type Records = list[dict[str, Any]]
 type Status = Literal["Archived", "Published", "Active", "Draft", "Development"]
 type DifficultyLevel = Literal["notspecified", "advanced", "beginner", "intermediate"]
 
-
 #: Instances of TeSS. ELIXIR tries to maintain a loist
 #: of known instances at https://elixirtess.github.io/docs/overview/global/
 INSTANCES = {
@@ -91,6 +90,14 @@ class _BaseLearningMaterial(BaseModel):
     fields: list[str] | None = None
     learning_objectives: str | None = Field(None, serialization_alias="learning-objectives")
 
+    date_created: datetime.date | None = Field(None, serialization_alias="date-created")
+    date_modified: datetime.date | None = Field(None, serialization_alias="date-modified")
+    date_published: datetime.date | None = Field(None, serialization_alias="date-published")
+    last_scraped: datetime.date | None = Field(None, serialization_alias="last-scraped")
+    scraper_record: bool | None = Field(None, serialization_alias="scraper-record")
+    created_at: datetime.datetime | None = Field(None, serialization_alias="created-at")
+    updated_at: datetime.datetime | None = Field(None, serialization_alias="updated-at")
+
     @pydantic.field_validator("status", mode="before")
     @classmethod
     def status_title_case(cls, value: str | None) -> str | None:
@@ -102,15 +109,8 @@ class _BaseLearningMaterial(BaseModel):
     # "operations": [],
     # "syllabus": null,
     # "subsets": [],
-    # "date-created": "2022-10-11",
-    # "date-modified": "2025-06-11",
-    # "date-published": "2025-05-05",
     # "remote-updated-date": null,
     # "remote-created-date": null,
-    # "last-scraped": "2025-06-18",
-    # "scraper-record": true,
-    # "created-at": "2025-06-18T05:33:14.781Z",
-    # "updated-at": "2025-06-18T05:33:14.781Z"
 
 
 class LearningMaterial(_BaseLearningMaterial):
