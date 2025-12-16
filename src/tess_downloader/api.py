@@ -134,6 +134,12 @@ class LearningMaterialWrapper(BaseModel):
     links: Links | None = None
 
 
+class LearningPath(BaseModel):
+    """A learning path."""
+
+    title: str
+
+
 class TeSSClient:
     """A client to a TeSS instance."""
 
@@ -256,9 +262,26 @@ class TeSSClient:
         """Get collections, e.g., https://tess.elixir-europe.org/collections."""
         return self._get_paginated("collections")
 
-    def get_learning_paths(self) -> Records:
+    def get_learning_path(self, slug_or_id: str | int) -> LearningPath:
+        """Get a single learning path, e.g., https://tess.elixir-europe.org/learning_paths.
+
+        :param slug_or_id: Either a slug (in kebab case) or numeric ID for the learning
+            path within the TeSS instance
+
+        :returns: A learning path
+
+        >>> from tess_downloader import TeSSClient
+        >>> client = TeSSClient()
+        >>> slug = "applying-single-cell-rna-seq-analysis"
+        >>> learning_path = client.get_learning_path(slug)
+        >>> learning_path.title
+        'Applying single-cell RNA-seq analysis'
+        """
+        raise NotImplementedError
+
+    def get_learning_paths(self) -> list[LearningPath]:
         """Get learning paths, e.g., https://tess.elixir-europe.org/learning_paths."""
-        return self._get_paginated("learning_paths")
+        return [LearningPath.model_validate(p) for p in self._get_paginated("learning_paths")]
 
     def get_content_providers(self) -> Records:
         """Get content providers, e.g., https://tess.elixir-europe.org/content_providers."""
