@@ -68,7 +68,7 @@ class LearningMaterial(BaseModel):
     slug: str | None = None
     title: str
     url: str
-    description: str
+    description: str | None = None
     keywords: list[str] | None = None
     resource_type: list[str] | None = Field(None, serialization_alias="resource-type")
     other_types: None = Field(None, serialization_alias="other-types")
