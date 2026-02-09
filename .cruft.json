@@ -1,6 +1,6 @@
 {
   "template": "https://github.com/cthoyt/cookiecutter-snekpack",
-  "commit": "447af73fdae92bc2f44f6ef9217cf9b390b3936c",
+  "commit": "7f7d141397eae4f598776a3f3881ccb88bbed41a",
   "checkout": null,
   "context": {
     "cookiecutter": {
@@ -23,7 +23,8 @@
       "__runner_install_pip": "python3 -m pip install tox tox-uv",
       "__runner_tests": "py",
       "__gh_slug": "cthoyt/tess-downloader",
-      "_template": "https://github.com/cthoyt/cookiecutter-snekpack"
+      "_template": "https://github.com/cthoyt/cookiecutter-snekpack",
+      "_commit": "7f7d141397eae4f598776a3f3881ccb88bbed41a"
     }
   },
   "directory": null
